@@ -53,7 +53,7 @@ interface ContentItem {
 export default function OnboardingPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
-  const [userRole, setUserRole] = useState<"setter" | "closer" | "manager">("")
+  const [userRole, setUserRole] = useState<"" | "setter" | "closer" | "manager">("")
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [contentItems, setContentItems] = useState<ContentItem[]>([])
   const [isLoading, setIsLoading] = useState(false)

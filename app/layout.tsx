@@ -1,5 +1,5 @@
 import type React from "react"
-import "./globals.css"
+import "../styles/globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -37,6 +37,7 @@ export default function RootLayout({
             </SampleDataProvider>
           </UserProvider>
         </ThemeProvider>
+        <div className="bg-red-500 text-white p-4">If you see a red box, Tailwind is working!</div>
       </body>
     </html>
   )

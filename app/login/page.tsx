@@ -55,6 +55,10 @@ export default function LoginPage() {
             role: localStorage.getItem("enabl-user-role"),
             onboarding: localStorage.getItem("enabl-onboarding-completed")
           })
+        } else {
+          // For all other users, require onboarding
+          localStorage.setItem("enabl-onboarding-required", "true")
+          localStorage.removeItem("enabl-onboarding-completed")
         }
 
         // For new account credentials, set up Jordan's account

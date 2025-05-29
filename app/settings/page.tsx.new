@@ -1,0 +1,813 @@
+"use client"
+
+import { DialogTrigger } from "@/components/ui/dialog"
+import {
+  Bell,
+  Key,
+  Mail,
+  Palette,
+  Shield,
+  Calendar,
+  Link,
+  ExternalLink,
+  Plug,
+  CalendarDays,
+  Phone,
+  UserPlus,
+  Search,
+  MoreHorizontal,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useUser } from "@/components/user-context"
+import { useState } from "react"
+
+export default function SettingsPage() {
+  const { userRole } = useUser()
+  const isManager = userRole === "manager"
+  const [selectedRole, setSelectedRole] = useState("setter")
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [formData, setFormData] = useState<Record<string, string>>({})
+
+  const validateKPIField = (fieldName: string, value: string, role: string) => {
+    const numValue = Number.parseFloat(value)
+    
+    if (value && isNaN(numValue)) {
+      return "Must be a valid number"
+    }
+    
+    const validationRules: Record<string, Record<string, { min: number; max: number; label: string }>> = {
+      setter: {
+        "minimum-inputs": { min: 1, max: 500, label: "Minimum Inputs (Weekly)" },
+        "positive-conversations": { min: 1, max: 200, label: "Positive Conversations (Weekly)" },
+        "meetings-booked": { min: 1, max: 100, label: "Meetings Booked (Weekly)" }
+      },
+      closer: {
+        "calls-taken": { min: 1, max: 200, label: "Calls Taken (Weekly)" },
+        "deals-closed": { min: 1, max: 50, label: "Deals Closed (Monthly)" },
+        "revenue-generated": { min: 1000, max: 1000000, label: "Revenue Generated (Monthly)" }
+      },
+      manager: {
+        "team-revenue": { min: 10000, max: 10000000, label: "Team Revenue Target/Month" },
+        "team-deals": { min: 5, max: 500, label: "Team Deals/Month" },
+        "team-enablement": { min: 1, max: 100, label: "Team Enablement Score" },
+        "training-completion": { min: 1, max: 100, label: "Training Completion Rate" }
+      }
+    }
+    
+    const rule = validationRules[role]?.[fieldName]
+    if (!rule) return ""
+    
+    if (value && (numValue < rule.min || numValue > rule.max)) {
+      return `${rule.label} must be between ${rule.min} and ${rule.max}`
+    }
+    
+    return ""
+  }
+
+  const handleKPIChange = (fieldName: string, value: string) => {
+    setFormData(prev => ({ ...prev, [fieldName]: value }))
+    const error = validateKPIField(fieldName, value, selectedRole)
+    setFormErrors(prev => ({ ...prev, [fieldName]: error }))
+  }
+
+  const validateAllKPIs = () => {
+    const errors: Record<string, string> = {}
+    const kpiFields =
+      selectedRole === "setter"
+        ? ["minimum-inputs", "positive-conversations", "meetings-booked"]
+        : selectedRole === "closer"
+        ? ["calls-taken", "deals-closed", "revenue-generated"]
+        : ["team-revenue", "team-deals", "team-enablement", "training-completion"]
+
+    kpiFields.forEach((field) => {
+      const value = formData[field] || ""
+      const error = validateKPIField(field, value, selectedRole)
+      if (error) errors[field] = error
+    })
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  return (
+    <div className="flex min-h-screen w-full flex-col overflow-x-hidden">
+      <main className="flex flex-1 flex-col gap-4 p-2 md:gap-6 md:p-4 overflow-x-hidden">
+        <div className="w-full overflow-x-hidden">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Settings</h1>
+              <p className="text-muted-foreground">Manage your account settings and preferences</p>
+            </div>
+            <div>
+              <Button>Save Changes</Button>
+            </div>
+          </div>
+
+          <Tabs defaultValue="account" className="mt-4 overflow-x-hidden">
+            <div className="w-full overflow-x-auto">
+              <TabsList className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 bg-white">
+                <TabsTrigger value="account">Account</TabsTrigger>
+                <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                <TabsTrigger value="appearance">Appearance</TabsTrigger>
+                <TabsTrigger value="integrations">Integrations</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
+                {isManager && <TabsTrigger value="users">Users</TabsTrigger>}
+              </TabsList>
+            </div>
+
+            {/* Account Tab Content */}
+            <TabsContent value="account" className="mt-4 space-y-4 overflow-x-hidden">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Information</CardTitle>
+                  <CardDescription>Update your profile information and email address.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src="/placeholder-avatar.jpg" alt="Profile" />
+                      <AvatarFallback>JD</AvatarFallback>
+                    </Avatar>
+                    <Button variant="outline">Change Avatar</Button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input id="name" placeholder="Enter your full name" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" placeholder="Enter your email" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input id="phone" type="tel" placeholder="Enter your phone number" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Role</Label>
+                      <Select defaultValue={selectedRole} onValueChange={setSelectedRole}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="setter">Setter</SelectItem>
+                          <SelectItem value="closer">Closer</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>KPI Settings</CardTitle>
+                  <CardDescription>Set your KPI targets based on your role.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedRole === "setter" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="minimum-inputs">Minimum Inputs (Weekly)</Label>
+                        <Input
+                          id="minimum-inputs"
+                          type="number"
+                          value={formData["minimum-inputs"] || ""}
+                          onChange={(e) => handleKPIChange("minimum-inputs", e.target.value)}
+                        />
+                        {formErrors["minimum-inputs"] && (
+                          <p className="text-sm text-red-500">{formErrors["minimum-inputs"]}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="positive-conversations">Positive Conversations (Weekly)</Label>
+                        <Input
+                          id="positive-conversations"
+                          type="number"
+                          value={formData["positive-conversations"] || ""}
+                          onChange={(e) => handleKPIChange("positive-conversations", e.target.value)}
+                        />
+                        {formErrors["positive-conversations"] && (
+                          <p className="text-sm text-red-500">{formErrors["positive-conversations"]}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="meetings-booked">Meetings Booked (Weekly)</Label>
+                        <Input
+                          id="meetings-booked"
+                          type="number"
+                          value={formData["meetings-booked"] || ""}
+                          onChange={(e) => handleKPIChange("meetings-booked", e.target.value)}
+                        />
+                        {formErrors["meetings-booked"] && (
+                          <p className="text-sm text-red-500">{formErrors["meetings-booked"]}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {selectedRole === "closer" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="calls-taken">Calls Taken (Weekly)</Label>
+                        <Input
+                          id="calls-taken"
+                          type="number"
+                          value={formData["calls-taken"] || ""}
+                          onChange={(e) => handleKPIChange("calls-taken", e.target.value)}
+                        />
+                        {formErrors["calls-taken"] && (
+                          <p className="text-sm text-red-500">{formErrors["calls-taken"]}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="deals-closed">Deals Closed (Monthly)</Label>
+                        <Input
+                          id="deals-closed"
+                          type="number"
+                          value={formData["deals-closed"] || ""}
+                          onChange={(e) => handleKPIChange("deals-closed", e.target.value)}
+                        />
+                        {formErrors["deals-closed"] && (
+                          <p className="text-sm text-red-500">{formErrors["deals-closed"]}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="revenue-generated">Revenue Generated (Monthly)</Label>
+                        <Input
+                          id="revenue-generated"
+                          type="number"
+                          value={formData["revenue-generated"] || ""}
+                          onChange={(e) => handleKPIChange("revenue-generated", e.target.value)}
+                        />
+                        {formErrors["revenue-generated"] && (
+                          <p className="text-sm text-red-500">{formErrors["revenue-generated"]}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {selectedRole === "manager" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="team-revenue">Team Revenue Target/Month</Label>
+                        <Input
+                          id="team-revenue"
+                          type="number"
+                          value={formData["team-revenue"] || ""}
+                          onChange={(e) => handleKPIChange("team-revenue", e.target.value)}
+                        />
+                        {formErrors["team-revenue"] && (
+                          <p className="text-sm text-red-500">{formErrors["team-revenue"]}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="team-deals">Team Deals/Month</Label>
+                        <Input
+                          id="team-deals"
+                          type="number"
+                          value={formData["team-deals"] || ""}
+                          onChange={(e) => handleKPIChange("team-deals", e.target.value)}
+                        />
+                        {formErrors["team-deals"] && (
+                          <p className="text-sm text-red-500">{formErrors["team-deals"]}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="team-enablement">Team Enablement Score</Label>
+                        <Input
+                          id="team-enablement"
+                          type="number"
+                          value={formData["team-enablement"] || ""}
+                          onChange={(e) => handleKPIChange("team-enablement", e.target.value)}
+                        />
+                        {formErrors["team-enablement"] && (
+                          <p className="text-sm text-red-500">{formErrors["team-enablement"]}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="training-completion">Training Completion Rate</Label>
+                        <Input
+                          id="training-completion"
+                          type="number"
+                          value={formData["training-completion"] || ""}
+                          onChange={(e) => handleKPIChange("training-completion", e.target.value)}
+                        />
+                        {formErrors["training-completion"] && (
+                          <p className="text-sm text-red-500">{formErrors["training-completion"]}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Notifications Tab Content */}
+            <TabsContent value="notifications" className="mt-6 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Email Notifications</CardTitle>
+                  <CardDescription>Configure your email notification preferences.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Meeting Reminders</Label>
+                      <p className="text-sm text-muted-foreground">Receive email reminders for upcoming meetings</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>KPI Updates</Label>
+                      <p className="text-sm text-muted-foreground">Get weekly updates on your KPI progress</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Team Activity</Label>
+                      <p className="text-sm text-muted-foreground">Receive notifications about team activities</p>
+                    </div>
+                    <Switch />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>In-App Notifications</CardTitle>
+                  <CardDescription>Manage your in-app notification preferences.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>New Messages</Label>
+                      <p className="text-sm text-muted-foreground">Get notified when you receive new messages</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Task Assignments</Label>
+                      <p className="text-sm text-muted-foreground">Receive notifications for new task assignments</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>System Updates</Label>
+                      <p className="text-sm text-muted-foreground">Get notified about system updates and maintenance</p>
+                    </div>
+                    <Switch />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Appearance Tab Content */}
+            <TabsContent value="appearance" className="mt-6 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Theme Settings</CardTitle>
+                  <CardDescription>Customize the appearance of your dashboard.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Theme</Label>
+                    <RadioGroup defaultValue="system" className="grid grid-cols-3 gap-4">
+                      <div>
+                        <RadioGroupItem value="light" id="light" className="peer sr-only" />
+                        <Label
+                          htmlFor="light"
+                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mb-3 h-6 w-6"
+                          >
+                            <circle cx="12" cy="12" r="4" />
+                            <path d="M12 2v2" />
+                            <path d="M12 20v2" />
+                            <path d="m4.93 4.93 1.41 1.41" />
+                            <path d="m17.66 17.66 1.41 1.41" />
+                            <path d="M2 12h2" />
+                            <path d="M20 12h2" />
+                            <path d="m6.34 17.66-1.41 1.41" />
+                            <path d="m19.07 4.93-1.41 1.41" />
+                          </svg>
+                          Light
+                        </Label>
+                      </div>
+                      <div>
+                        <RadioGroupItem value="dark" id="dark" className="peer sr-only" />
+                        <Label
+                          htmlFor="dark"
+                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mb-3 h-6 w-6"
+                          >
+                            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                          </svg>
+                          Dark
+                        </Label>
+                      </div>
+                      <div>
+                        <RadioGroupItem value="system" id="system" className="peer sr-only" />
+                        <Label
+                          htmlFor="system"
+                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mb-3 h-6 w-6"
+                          >
+                            <rect width="20" height="14" x="2" y="3" rx="2" />
+                            <line x1="8" x2="16" y1="21" y2="21" />
+                            <line x1="12" x2="12" y1="17" y2="21" />
+                          </svg>
+                          System
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Integrations Tab Content */}
+            <TabsContent value="integrations" className="mt-6 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Connected Services</CardTitle>
+                  <CardDescription>Manage your connected services and integrations.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="rounded-lg bg-muted p-2">
+                        <Calendar className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Google Calendar</p>
+                        <p className="text-sm text-muted-foreground">Connected</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Disconnect
+                    </Button>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="rounded-lg bg-muted p-2">
+                        <Mail className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Gmail</p>
+                        <p className="text-sm text-muted-foreground">Connected</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Disconnect
+                    </Button>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="rounded-lg bg-muted p-2">
+                        <Phone className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Phone System</p>
+                        <p className="text-sm text-muted-foreground">Not connected</p>
+                      </div>
+                    </div>
+                    <Button size="sm">Connect</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Available Integrations</CardTitle>
+                  <CardDescription>Connect with additional services to enhance your workflow.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <div className="flex items-center space-x-4 rounded-lg border p-4">
+                    <div className="rounded-lg bg-muted p-2">
+                      <Plug className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="font-medium">Slack</p>
+                      <p className="text-sm text-muted-foreground">Connect with Slack for team communication</p>
+                    </div>
+                    <Button size="sm">Connect</Button>
+                  </div>
+                  <div className="flex items-center space-x-4 rounded-lg border p-4">
+                    <div className="rounded-lg bg-muted p-2">
+                      <Link className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="font-medium">Zoom</p>
+                      <p className="text-sm text-muted-foreground">Integrate with Zoom for video meetings</p>
+                    </div>
+                    <Button size="sm">Connect</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Security Tab Content */}
+            <TabsContent value="security" className="mt-6 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Password</CardTitle>
+                  <CardDescription>Change your password and manage security settings.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password">Current Password</Label>
+                    <Input id="current-password" type="password" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <Input id="new-password" type="password" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                    <Input id="confirm-password" type="password" />
+                  </div>
+                  <Button>Update Password</Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Two-Factor Authentication</CardTitle>
+                  <CardDescription>Add an extra layer of security to your account.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Two-Factor Authentication</Label>
+                      <p className="text-sm text-muted-foreground">Enable two-factor authentication for your account</p>
+                    </div>
+                    <Switch />
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>Recovery Codes</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Generate recovery codes to access your account if you lose your device
+                    </p>
+                    <Button variant="outline" size="sm">
+                      Generate Recovery Codes
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Active Sessions</CardTitle>
+                  <CardDescription>Manage your active sessions and devices.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="rounded-lg bg-muted p-2">
+                        <Shield className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Current Session</p>
+                        <p className="text-sm text-muted-foreground">Chrome on macOS • Active now</p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary">Current</Badge>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="rounded-lg bg-muted p-2">
+                        <Shield className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-medium">iPhone 13</p>
+                        <p className="text-sm text-muted-foreground">Safari on iOS • Last active 2 hours ago</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Revoke
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Users Tab Content */}
+            {isManager && (
+              <TabsContent value="users" className="mt-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">Team Members</h2>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2">
+                        <UserPlus className="h-4 w-4" />
+                        Add New User
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+                      <DialogHeader>
+                        <DialogTitle>Add New Team Member</DialogTitle>
+                        <DialogDescription>
+                          Add a new team member to your organization. They will receive an email invitation.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input id="name" placeholder="Enter full name" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input id="email" type="email" placeholder="Enter email address" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="role">Role</Label>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="setter">Setter</SelectItem>
+                              <SelectItem value="closer">Closer</SelectItem>
+                              <SelectItem value="manager">Manager</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="team">Team</Label>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a team" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sales">Sales</SelectItem>
+                              <SelectItem value="marketing">Marketing</SelectItem>
+                              <SelectItem value="support">Support</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit">Send Invitation</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search users..." className="max-w-sm" />
+                </div>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle>Team Members</CardTitle>
+                    <CardDescription>Manage your team members and their roles.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="rounded-md border">
+                      <div className="grid grid-cols-12 bg-muted/50 p-3 text-sm font-medium">
+                        <div className="col-span-4">Name</div>
+                        <div className="col-span-3">Email</div>
+                        <div className="col-span-2">Role</div>
+                        <div className="col-span-2">Team</div>
+                        <div className="col-span-1 text-right">Actions</div>
+                      </div>
+                      <div className="divide-y">
+                        <div className="grid grid-cols-12 items-center p-3">
+                          <div className="col-span-4 flex items-center space-x-3">
+                            <Avatar>
+                              <AvatarImage src="/placeholder-avatar.jpg" alt="John Doe" />
+                              <AvatarFallback>JD</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">John Doe</p>
+                              <p className="text-sm text-muted-foreground">Active now</p>
+                            </div>
+                          </div>
+                          <div className="col-span-3">john.doe@example.com</div>
+                          <div className="col-span-2">
+                            <Badge variant="secondary">Setter</Badge>
+                          </div>
+                          <div className="col-span-2">
+                            <Badge variant="outline">Sales</Badge>
+                          </div>
+                          <div className="col-span-1 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem>Change Role</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-12 items-center p-3">
+                          <div className="col-span-4 flex items-center space-x-3">
+                            <Avatar>
+                              <AvatarImage src="/placeholder-avatar.jpg" alt="Jane Smith" />
+                              <AvatarFallback>JS</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">Jane Smith</p>
+                              <p className="text-sm text-muted-foreground">Last active 2h ago</p>
+                            </div>
+                          </div>
+                          <div className="col-span-3">jane.smith@example.com</div>
+                          <div className="col-span-2">
+                            <Badge variant="secondary">Closer</Badge>
+                          </div>
+                          <div className="col-span-2">
+                            <Badge variant="outline">Sales</Badge>
+                          </div>
+                          <div className="col-span-1 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem>Change Role</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+          </Tabs>
+        </div>
+      </main>
+    </div>
+  )
+} 
